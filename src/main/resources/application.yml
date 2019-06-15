@@ -1,4 +1,4 @@
 server:
   port: 8888
   servlet:
-    context-path: /
+    context-path: /abc

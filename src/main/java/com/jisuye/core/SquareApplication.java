@@ -1,11 +1,13 @@
 package com.jisuye.core;
 
 import com.jisuye.util.ArgsToKVUtil;
+import com.jisuye.util.LoadApplicationYmlUtil;
 import org.apache.catalina.startup.Tomcat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -15,6 +17,7 @@ import java.util.Map;
  */
 public class SquareApplication {
     private static final Logger log = LoggerFactory.getLogger(SquareApplication.class);
+    private static Map<String, Object> CONF_MAP = new HashMap<>();
     private static Tomcat tomcat = null;
     private static String CONTEXT_PATH = "/";
     private static String ENCODING = "UTF-8";
@@ -23,17 +26,19 @@ public class SquareApplication {
     public static void run(Class clzz, String[] args) {
         try {
             long startTime = System.currentTimeMillis();
-            // 初始化参数
-            setArgs(args);
             String project_path = clzz.getResource("").getPath();
             project_path = project_path.substring(0, project_path.indexOf("classes"));
+            // 加载配置
+            loadYaml(project_path);
+            // 初始化参数
+            setArgs(args);
             // 输出banner
             printBanner(project_path);
             tomcat = new Tomcat();
-            // 设置Tomcat的工作目录:工程根目录/Tomcat
+            // 设置Tomcat工作目录
             tomcat.setBaseDir(project_path + "/Tomcat");
             tomcat.setPort(TOMCAT_PORT);
-            tomcat.addWebapp(CONTEXT_PATH, project_path);
+            tomcat.addWebapp(CONTEXT_PATH, project_path+"/classes/public");
             // 执行这句才能支持JDNI查找
             tomcat.enableNaming();
             tomcat.getConnector().setURIEncoding(ENCODING);
@@ -59,7 +64,22 @@ public class SquareApplication {
     }
 
     /**
-     * 输出banner图
+     * 加载配置文件
+     * @param projectPath
+     */
+    private static void loadYaml(String projectPath){
+        CONF_MAP =  LoadApplicationYmlUtil.load(projectPath);
+        if(CONF_MAP.get("server.port") != null){
+            TOMCAT_PORT = (Integer)CONF_MAP.get("server.port");
+        }
+        if(CONF_MAP.get("server.servlet.context-path") != null){
+            CONTEXT_PATH = (String)CONF_MAP.get("server.servlet.context-path");
+        }
+    }
+
+    /**
+     * 输出Banner图
+     * @param projectPath
      */
     private static void printBanner(String projectPath){
         BufferedReader br = null;
