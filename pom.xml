@@ -13,6 +13,8 @@
         <slf4j-version>1.7.20</slf4j-version>
         <logback-version>1.2.3</logback-version>
         <snakeyaml.version>1.9</snakeyaml.version>
+        <compiler.plugin.version>3.8.1</compiler.plugin.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
@@ -51,6 +53,7 @@
         <plugins>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler.plugin.version}</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>

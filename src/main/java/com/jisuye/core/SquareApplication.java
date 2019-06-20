@@ -1,6 +1,7 @@
 package com.jisuye.core;
 
 import com.jisuye.util.ArgsToKVUtil;
+import com.jisuye.util.ClassesPathUtil;
 import com.jisuye.util.LoadApplicationYmlUtil;
 import org.apache.catalina.startup.Tomcat;
 import org.slf4j.Logger;
@@ -22,23 +23,23 @@ public class SquareApplication {
     private static String CONTEXT_PATH = "/";
     private static String ENCODING = "UTF-8";
     private static int TOMCAT_PORT = 8080;
+    private static ClassesPathUtil classesPathUtil;
 
     public static void run(Class clzz, String[] args) {
         try {
             long startTime = System.currentTimeMillis();
-            String project_path = clzz.getResource("").getPath();
-            project_path = project_path.substring(0, project_path.indexOf("classes"));
+            classesPathUtil = new ClassesPathUtil(clzz);
             // 加载配置
-            loadYaml(project_path);
+            loadYaml(classesPathUtil.getProjectPath());
             // 初始化参数
             setArgs(args);
             // 输出banner
-            printBanner(project_path);
+            printBanner(classesPathUtil.getProjectPath());
             tomcat = new Tomcat();
             // 设置Tomcat工作目录
-            tomcat.setBaseDir(project_path + "/Tomcat");
+            tomcat.setBaseDir(classesPathUtil.getProjectPath() + "/Tomcat");
             tomcat.setPort(TOMCAT_PORT);
-            tomcat.addWebapp(CONTEXT_PATH, project_path+"/classes/public");
+            tomcat.addWebapp(CONTEXT_PATH, classesPathUtil.getPublicPath());
             // 执行这句才能支持JDNI查找
             tomcat.enableNaming();
             tomcat.getConnector().setURIEncoding(ENCODING);
@@ -84,8 +85,13 @@ public class SquareApplication {
     private static void printBanner(String projectPath){
         BufferedReader br = null;
         try{
-            File f = new File(projectPath + "/classes/default-banner.txt");
-            br = new BufferedReader(new FileReader(f));
+            File f = new File(projectPath+"/default-banner.txt");
+            if(f.exists()){
+                br = new BufferedReader(new FileReader(f));
+            } else {
+                InputStream is = SquareApplication.class.getClassLoader().getResourceAsStream("default-banner.txt");
+                br = new BufferedReader(new InputStreamReader(is));
+            }
             StringBuilder stringBuilder = new StringBuilder("\n");
             String line;
             while ((line = br.readLine()) != null){

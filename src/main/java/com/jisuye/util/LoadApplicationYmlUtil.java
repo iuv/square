@@ -20,7 +20,7 @@ public class LoadApplicationYmlUtil {
         Map<String, Object> retMap = new HashMap<>();
         Yaml yaml = new Yaml();
         try {
-            Map<String, Object> map = (Map<String, Object>)yaml.load(new FileInputStream(projectPath+"/classes/application.yml"));
+            Map<String, Object> map = (Map<String, Object>)yaml.load(new FileInputStream(projectPath+"/application.yml"));
             if(map != null && map.size()>0){
                 for(Map.Entry e : map.entrySet()) {
                     convert("", retMap, e);
