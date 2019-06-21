@@ -1,6 +1,7 @@
 package com.jisuye.core;
 
 import com.jisuye.util.ArgsToKVUtil;
+import com.jisuye.util.BeansInitUtil;
 import com.jisuye.util.ClassesPathUtil;
 import com.jisuye.util.LoadApplicationYmlUtil;
 import org.apache.catalina.startup.Tomcat;
@@ -35,6 +36,8 @@ public class SquareApplication {
             setArgs(args);
             // 输出banner
             printBanner(classesPathUtil.getProjectPath());
+            Map<String, BeanObject> map = BeansInitUtil.init(clzz);
+            log.info("beans size is:{}", map.size());
             tomcat = new Tomcat();
             // 设置Tomcat工作目录
             tomcat.setBaseDir(classesPathUtil.getProjectPath() + "/Tomcat");
