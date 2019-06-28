@@ -1,6 +1,7 @@
 package com.jisuye.core;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 
 /**
  * 封装Bean对象
@@ -30,9 +31,19 @@ public class BeanObject {
     private Annotation[] annotaions;
 
     /**
+     * 使用链表处理同一接口多个实现类的情况
+     */
+    private BeanObject next;
+
+    /**
      * 接口名
      */
     private Class[] interfacs;
+
+    /**
+     * 字段数组
+     */
+    private Field[] fields;
 
     public String getClassName() {
         return className;
@@ -80,5 +91,21 @@ public class BeanObject {
 
     public void setInterfacs(Class[] interfacs) {
         this.interfacs = interfacs;
+    }
+
+    public BeanObject getNext() {
+        return next;
+    }
+
+    public void setNext(BeanObject next) {
+        this.next = next;
+    }
+
+    public Field[] getFields() {
+        return fields;
+    }
+
+    public void setFields(Field[] fields) {
+        this.fields = fields;
     }
 }
