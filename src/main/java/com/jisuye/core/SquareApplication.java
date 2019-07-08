@@ -1,10 +1,9 @@
 package com.jisuye.core;
 
+import com.jisuye.exception.SquareBeanInitException;
 import com.jisuye.service.Abc;
-import com.jisuye.util.ArgsToKVUtil;
-import com.jisuye.util.BeansInitUtil;
-import com.jisuye.util.ClassesPathUtil;
-import com.jisuye.util.LoadApplicationYmlUtil;
+import com.jisuye.service.Def;
+import com.jisuye.util.*;
 import org.apache.catalina.startup.Tomcat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +20,7 @@ import java.util.Map;
 public class SquareApplication {
     private static final Logger log = LoggerFactory.getLogger(SquareApplication.class);
     private static Map<String, Object> CONF_MAP = new HashMap<>();
+    private static Map<String, BeanObject> BEAN_MAP = new HashMap<>();
     private static Tomcat tomcat = null;
     private static String CONTEXT_PATH = "/";
     private static String ENCODING = "UTF-8";
@@ -30,6 +30,7 @@ public class SquareApplication {
     public static void run(Class clzz, String[] args) {
         try {
             long startTime = System.currentTimeMillis();
+            ApplicationContext.init(CONF_MAP, BEAN_MAP);
             classesPathUtil = new ClassesPathUtil(clzz);
             // 加载配置
             loadYaml(classesPathUtil.getProjectPath());
@@ -37,10 +38,10 @@ public class SquareApplication {
             setArgs(args);
             // 输出banner
             printBanner(classesPathUtil.getProjectPath());
-            Map<String, BeanObject> map = BeansInitUtil.init(clzz);
-            log.info("beans size is:{}", map.size());
+            BeansInitUtil.init(clzz, BEAN_MAP);
+            log.info("beans size is:{}", BEAN_MAP.size());
             //查看bean是否注入成功
-            Abc abc = (Abc)(map.get("com.jisuye.service.Abc").getObject());
+            Abc abc = (Abc)(ApplicationContext.getBean("abcImpl").getObject());
             abc.test("ixx");
             tomcat = new Tomcat();
             // 设置Tomcat工作目录
@@ -56,6 +57,9 @@ public class SquareApplication {
             // 保持服务器进程
             tomcat.getServer().await();
         } catch (Exception e) {
+            if(e instanceof SquareBeanInitException){
+                log.error(((SquareBeanInitException) e).getMsg());
+            }
             log.error("Application startup failed...", e);
         }
     }
@@ -76,7 +80,7 @@ public class SquareApplication {
      * @param projectPath
      */
     private static void loadYaml(String projectPath){
-        CONF_MAP =  LoadApplicationYmlUtil.load(projectPath);
+        CONF_MAP.putAll(LoadApplicationYmlUtil.load(projectPath));
         if(CONF_MAP.get("server.port") != null){
             TOMCAT_PORT = (Integer)CONF_MAP.get("server.port");
         }

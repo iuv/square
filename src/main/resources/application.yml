@@ -2,3 +2,8 @@ server:
   port: 8888
   servlet:
     context-path: /abc
+square:
+  datasource:
+    url: jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=utf8&useSSL=false&autoReconnect=true
+    username: root
+    password: 123456

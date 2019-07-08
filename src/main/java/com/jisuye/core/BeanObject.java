@@ -108,4 +108,12 @@ public class BeanObject {
     public void setFields(Field[] fields) {
         this.fields = fields;
     }
+
+    public void setClass(Class clzz){
+        this.setSimpleName(clzz.getSimpleName());
+        this.setClassName(clzz.getName());
+        this.setInterfacs(clzz.getInterfaces());
+        this.setPackages(clzz.getPackage().toString());
+        this.setFields(clzz.getDeclaredFields());
+    }
 }

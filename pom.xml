@@ -15,6 +15,8 @@
         <snakeyaml.version>1.9</snakeyaml.version>
         <compiler.plugin.version>3.8.1</compiler.plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <mysql.version>5.1.35</mysql.version>
+        <hikariCP.version>3.3.1</hikariCP.version>
     </properties>
 
     <dependencies>
@@ -47,6 +49,16 @@
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
             <version>${snakeyaml.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>${mysql.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>${hikariCP.version}</version>
         </dependency>
     </dependencies>
     <build>
