@@ -1,10 +1,8 @@
 package com.jisuye.util;
 
-import com.jisuye.annotations.Component;
-import com.jisuye.annotations.Service;
-import com.jisuye.core.BeanObject;
-import com.jisuye.core.JdbcTemplate;
-import com.jisuye.exception.SquareBeanInitException;
+import com.jisuye.annotations.*;
+import com.jisuye.core.*;
+import com.jisuye.exception.SquareException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,6 +10,8 @@ import javax.annotation.Resource;
 import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.*;
 
 /**
@@ -22,7 +22,7 @@ import java.util.*;
 public class BeansInitUtil {
     private static final Logger log = LoggerFactory.getLogger(BeansInitUtil.class);
 
-    public static Map<String, BeanObject> init(Class clazz, Map<String, BeanObject> beansMap){
+    public static BeansMap init(Class clazz, BeansMap beansMap){
         String path = clazz.getResource("").getPath();
         log.info("===bean init path:{}", path);
         File root = new File(path);
@@ -33,7 +33,7 @@ public class BeansInitUtil {
         return beansMap;
     }
 
-    private static void initFile(File file, Map<String, BeanObject> map){
+    private static void initFile(File file, BeansMap map){
         File[] fs = file.listFiles();
         for (File f : fs) {
             if(f.isDirectory()){
@@ -45,17 +45,20 @@ public class BeansInitUtil {
             }
         }
     }
-    private static void loadClass(File file, Map<String, BeanObject> map){
+    private static String getClassPath(File file){
+        String path = file.getPath();
+        path = path.substring(path.indexOf("classes")+8).replace(".class", "");
+        path = path.replace("\\", ".");
+        return path;
+    }
+    private static void loadClass(File file, BeansMap map){
         if(file == null){
             return;
         }
         try {
             BeanObject beanObject = new BeanObject();
             log.info("load bean path:{}", file.getPath());
-            String path = file.getPath();
-            path = path.substring(path.indexOf("classes")+8).replace(".class", "");
-            path = path.replace("\\", ".");
-            Class clzz = Class.forName(path);
+            Class clzz = Class.forName(getClassPath(file));
             Annotation[] annotations = clzz.getAnnotations();
             if(annotations.length >0 && filterClassAnnotation(annotations)){
                 beanObject.setAnnotaions(annotations);
@@ -74,7 +77,7 @@ public class BeansInitUtil {
                 map.put(beanObject.getClassName(), beanObject);
                 String simpleName = firstToLowerCase(beanObject.getSimpleName());
                 if(map.get(simpleName) != null){
-                    throw new SquareBeanInitException("There are duplicate beans ，beanName:"+simpleName);
+                    throw new SquareException("There are duplicate beans ，beanName:"+simpleName);
                 }
                 map.put(simpleName, beanObject);
                 // 按注解输入value设置bean
@@ -84,31 +87,78 @@ public class BeansInitUtil {
                         tmp_name = ((Service)annotation).value();
                     } else if(annotation instanceof Component) {
                         tmp_name = ((Component)annotation).value();
+                    } else if(annotation instanceof Controller) {
+                        initController(clzz, ((Controller)annotation).value(), map);
                     }
                     if(tmp_name != null && !tmp_name.equals("")) {
                         if(map.get(tmp_name) != null){
-                            throw new SquareBeanInitException("There are duplicate beans ，beanName:"+tmp_name);
+                            throw new SquareException("There are duplicate beans ，beanName:"+tmp_name);
                         }
                         map.put(tmp_name, beanObject);
                     }
                 }
             }
-        } catch (SquareBeanInitException e) {
+        } catch (SquareException e) {
             throw e;
         } catch (Exception e){
             log.error("Bean init error...", e);
-            throw new SquareBeanInitException("Bean init error....");
+            throw new SquareException("Bean init error....");
+        }
+    }
+
+    /**
+     * 初始化Controller
+     * @param clzz
+     * @param classPath
+     */
+    private static void initController(Class clzz, String classPath, BeansMap beansMap){
+        try {
+            Method[] methods = clzz.getMethods();
+            // 处理每一个方法
+            for (Method method : methods) {
+                Annotation[] annotations = method.getDeclaredAnnotations();
+                String[] methodPath = getMethodAnnotationValue(annotations);
+                // 说明是@GetMapping @PostMapping @PutMapping @DeleteMapping 中的一个
+                if (methodPath != null) {
+                    // 获取参数及注解
+                    Parameter[] parameters = method.getParameters();
+                    SquareParam[] params = new SquareParam[parameters.length];
+                    int i = 0;
+                    for (Parameter parameter : parameters) {
+                        Annotation[] paramAnnotations = parameter.getAnnotations();
+                        SquareParam param = getParam(paramAnnotations, parameter.getType());
+                        params[i++] = param;
+                    }
+                    ControllerObject co = new ControllerObject();
+                    co.setParams(params);
+                    co.setHttpMethod(methodPath[0]);
+                    co.setMethod(method);
+                    co.setObject(beansMap.get(firstToLowerCase(clzz.getSimpleName())).getObject());
+                    String key = methodPath[0] +":"+ classPath+methodPath[1];
+                    beansMap.putController(key, co);
+                }
+            }
+        } catch (Exception e){
+            log.error("init controller error.", e);
+            throw new SquareException("init controller error", e);
         }
     }
     /**
      * 处理关系依赖
      * @param map Bean容器
      */
-    private static void initDI(Map<String, BeanObject> map){
+    private static void initDI(BeansMap map){
+        List<BeanObject> list = new ArrayList<>();
         BeanObject sqlBean = null;
         // 循环所有Bean处理依赖
         for(Map.Entry entry : map.entrySet()){
             BeanObject beanObject = (BeanObject)entry.getValue();
+            // 如果已经处理过，则跳过
+            if(list.contains(beanObject)){
+                break;
+            }
+            // 添加到已处理列表
+            list.add(beanObject);
             // 先判断是否有Resource注解
             for (Field field : beanObject.getFields()) {
                 if(filterFieldAnnotation(field.getAnnotations())){
@@ -133,7 +183,7 @@ public class BeansInitUtil {
                             if(bean == null){
                                 // 多于两个匹配的bean异常
                                 log.error("无法确定的Bean依赖，field:{}, 存在多个依赖！", beanObject.getClassName()+"."+fieldName);
-                                throw new SquareBeanInitException("无法确定的Bean依赖，存在多个依赖！");
+                                throw new SquareException("无法确定的Bean依赖，存在多个依赖！");
                             }
                         } else if(fieldClass.getName().equals(JdbcTemplate.class.getName())){
                             // 如果是JdbcTemplate依赖，则初始化DbUtil并初始化及注入JdbcTemplate
@@ -149,7 +199,7 @@ public class BeansInitUtil {
                     if(bean == null){
                         // 找不到依赖bean异常
                         log.error("无法找到Bean依赖，field:{}", beanObject.getClassName()+"."+field.getName());
-                        throw new SquareBeanInitException("无法找到Bean依赖");
+                        throw new SquareException("无法找到Bean依赖");
                     }
                     // 注入依赖
                     try {
@@ -157,7 +207,7 @@ public class BeansInitUtil {
                         field.set(beanObject.getObject(), bean.getObject());
                     } catch (IllegalAccessException e) {
                         log.error("Bean注入失败，field:{}", beanObject.getClassName()+"."+field.getName(), e);
-                        throw new SquareBeanInitException("Bean注入失败");
+                        throw new SquareException("Bean注入失败");
                     }
                 }
             }
@@ -169,6 +219,7 @@ public class BeansInitUtil {
         boolean b = false;
         for (Annotation annotation : annotations) {
             b = annotation instanceof Service || annotation instanceof Component;
+            b = b || annotation instanceof Controller;
         }
         return b;
     }
@@ -179,6 +230,34 @@ public class BeansInitUtil {
             b = annotation instanceof Resource;
         }
         return b;
+    }
+    /** * 获取方法上的注解value */
+    private static String[] getMethodAnnotationValue(Annotation[] annotations){
+        String[] methodPath = null;
+        for (Annotation annotation : annotations) {
+            if(annotation instanceof DeleteMapping){
+                methodPath = new String[]{"delete", ((DeleteMapping) annotation).value()};
+            } else if(annotation instanceof GetMapping){
+                methodPath = new String[]{"get", ((GetMapping) annotation).value()};
+            } else if(annotation instanceof PostMapping){
+                methodPath = new String[]{"post", ((PostMapping) annotation).value()};
+            } else if(annotation instanceof PutMapping){
+                methodPath = new String[]{"put", ((PutMapping) annotation).value()};
+            }
+        }
+        return methodPath;
+    }
+    /** * 获取参数@RequestParam注解的value 如果没有，则取参数名*/
+    private static SquareParam getParam(Annotation[] annotations, Class clazz){
+        SquareParam param = null;
+        for (Annotation annotation : annotations) {
+            if(annotation instanceof RequestParam){
+                param = new SquareParam(((RequestParam) annotation).value(), clazz);
+            } else if(annotation instanceof RequestBody){
+                param = new SquareParam(clazz);
+            }
+        }
+        return param;
     }
     /**  获取注入注解上指定的Bean名字 */
     private static String getResourceName(Annotation[] annotations){

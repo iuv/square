@@ -1,12 +1,12 @@
 package com.jisuye.exception;
 
-public class SquareBeanInitException extends RuntimeException{
+public class SquareException extends RuntimeException{
     private String msg;
-    public SquareBeanInitException(String msg, Exception e){
+    public SquareException(String msg, Exception e){
         super(e);
         this.msg = msg;
     }
-    public SquareBeanInitException(String msg){
+    public SquareException(String msg){
         this.msg = msg;
     }
 

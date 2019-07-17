@@ -1,7 +1,7 @@
 package com.jisuye.util;
 
 import com.jisuye.core.ApplicationContext;
-import com.jisuye.exception.SquareBeanInitException;
+import com.jisuye.exception.SquareException;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +38,7 @@ public class DbUtil {
             connection = ds.getConnection();
         } catch (Exception e) {
             log.error("mysql connection init error..", e);
-            throw new SquareBeanInitException("mysql connection init error....");
+            throw new SquareException("mysql connection init error....");
         }
     }
 

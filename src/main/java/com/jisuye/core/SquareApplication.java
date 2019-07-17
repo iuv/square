@@ -1,9 +1,10 @@
 package com.jisuye.core;
 
-import com.jisuye.exception.SquareBeanInitException;
+import com.jisuye.exception.SquareException;
 import com.jisuye.service.Abc;
-import com.jisuye.service.Def;
 import com.jisuye.util.*;
+import org.apache.catalina.Context;
+import org.apache.catalina.Wrapper;
 import org.apache.catalina.startup.Tomcat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +21,7 @@ import java.util.Map;
 public class SquareApplication {
     private static final Logger log = LoggerFactory.getLogger(SquareApplication.class);
     private static Map<String, Object> CONF_MAP = new HashMap<>();
-    private static Map<String, BeanObject> BEAN_MAP = new HashMap<>();
+    private static BeansMap BEAN_MAP = new BeansMap();
     private static Tomcat tomcat = null;
     private static String CONTEXT_PATH = "/";
     private static String ENCODING = "UTF-8";
@@ -47,7 +48,10 @@ public class SquareApplication {
             // 设置Tomcat工作目录
             tomcat.setBaseDir(classesPathUtil.getProjectPath() + "/Tomcat");
             tomcat.setPort(TOMCAT_PORT);
-            tomcat.addWebapp(CONTEXT_PATH, classesPathUtil.getPublicPath());
+            Context context = tomcat.addWebapp(CONTEXT_PATH, classesPathUtil.getPublicPath());
+            // 添加DsipatcherServlet
+            Wrapper wrapper = Tomcat.addServlet(context, "DispatcherServlet", new DispatcherServlet());
+            wrapper.addMapping("/");
             // 执行这句才能支持JDNI查找
             tomcat.enableNaming();
             tomcat.getConnector().setURIEncoding(ENCODING);
@@ -57,8 +61,8 @@ public class SquareApplication {
             // 保持服务器进程
             tomcat.getServer().await();
         } catch (Exception e) {
-            if(e instanceof SquareBeanInitException){
-                log.error(((SquareBeanInitException) e).getMsg());
+            if(e instanceof SquareException){
+                log.error(((SquareException) e).getMsg());
             }
             log.error("Application startup failed...", e);
         }

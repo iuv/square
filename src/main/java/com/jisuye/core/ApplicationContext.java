@@ -9,9 +9,9 @@ import java.util.Map;
  */
 public class ApplicationContext {
     private static Map<String, Object> CONF_MAP;
-    private static Map<String, BeanObject> BEAN_MAP;
+    private static BeansMap BEAN_MAP;
 
-    public static void init(Map<String, Object> conf, Map<String, BeanObject> bean){
+    public static void init(Map<String, Object> conf, BeansMap bean){
         CONF_MAP = conf;
         BEAN_MAP = bean;
     }
