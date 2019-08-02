@@ -1,4 +1,4 @@
-package com.jisuye.annotations;
+package com.jisuye.annotations.web;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -6,12 +6,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * http post 注解
+ * http delete 注解
  * @author ixx
  * @date 2019-07-14
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface PostMapping {
+public @interface DeleteMapping {
     String value() default "";
 }

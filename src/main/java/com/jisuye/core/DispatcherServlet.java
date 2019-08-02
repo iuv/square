@@ -22,6 +22,8 @@ public class DispatcherServlet extends HttpServlet {
 
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        // 保存web上下文
+        RequestContextHolder.init(req, resp);
         // 解析url
         String contextPath = req.getContextPath();
         String httpMethod = req.getMethod();
@@ -33,20 +35,25 @@ public class DispatcherServlet extends HttpServlet {
         if(controllerObject == null){
             resp.sendError(404);
         } else {
-            // 执行对应方法
-            Object obj = controllerObject.invoke(req);
-            // 处理返回结果
-            String json;
-            if (obj instanceof String) {
-                json = (String) obj;
-            } else {
-                json = JSON.toJSONString(obj);
-                resp.setHeader("content-type", "application/json;charset=UTF-8");
+            try {
+                // 执行对应方法
+                Object obj = controllerObject.invoke(req);
+                // 处理返回结果
+                String json;
+                if (obj instanceof String) {
+                    json = (String) obj;
+                } else {
+                    json = JSON.toJSONString(obj);
+                    resp.setHeader("content-type", "application/json;charset=UTF-8");
+                }
+                log.info("http request path:" + controllerKey);
+                log.info("exec method ：" + controllerObject.getMethod().getName());
+                log.info("response:" + json);
+                resp.getWriter().print(json);
+            } catch (Exception e){
+                log.error("Controller invoke error! controllerKey:{}", controllerKey);
+                resp.sendError(500);
             }
-            log.info("http request path:" + controllerKey);
-            log.info("exec method ：" + controllerObject.getMethod().getName());
-            log.info("response:" + json);
-            resp.getWriter().print(json);
         }
     }
 }

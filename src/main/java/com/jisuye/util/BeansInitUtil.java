@@ -1,6 +1,7 @@
 package com.jisuye.util;
 
 import com.jisuye.annotations.*;
+import com.jisuye.annotations.web.*;
 import com.jisuye.core.*;
 import com.jisuye.exception.SquareException;
 import org.slf4j.Logger;

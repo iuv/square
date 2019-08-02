@@ -1,4 +1,4 @@
-package com.jisuye.annotations;
+package com.jisuye.annotations.web;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -6,12 +6,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Web  Controller annotations
+ * http get 注解
  * @author ixx
  * @date 2019-07-14
  */
-@Target(ElementType.TYPE)
+@Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Controller {
+public @interface GetMapping {
     String value() default "";
 }

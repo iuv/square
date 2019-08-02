@@ -1,6 +1,6 @@
 package com.jisuye.service;
 
-import com.jisuye.annotations.*;
+import com.jisuye.annotations.web.*;
 import com.jisuye.core.JdbcTemplate;
 
 import javax.annotation.Resource;
