@@ -15,6 +15,9 @@ public class RequestContextHolder {
 
 
     public static HttpServletRequest getRequest() {
+        if(requestThreadLocal == null){
+            return null;
+        }
         return requestThreadLocal.get();
     }
 
@@ -23,6 +26,9 @@ public class RequestContextHolder {
     }
 
     public static HttpServletResponse getResponse() {
+        if(responseThreadLocal == null){
+            return null;
+        }
         return responseThreadLocal.get();
     }
 

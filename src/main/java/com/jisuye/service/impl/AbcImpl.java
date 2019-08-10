@@ -33,4 +33,14 @@ public class AbcImpl implements Abc {
         System.out.println(classDi.exe(name));
         return 0;
     }
+
+    @Override
+    public int abc(String name) {
+        return 0;
+    }
+
+    @Override
+    public int abc2(String name) {
+        return 0;
+    }
 }

@@ -29,7 +29,7 @@ public class DispatcherServlet extends HttpServlet {
         String httpMethod = req.getMethod();
         String uri = req.getRequestURI();
         // 匹配到对应的controller
-        String controllerKey = httpMethod.toLowerCase()+":"+uri.replace(contextPath, "");
+        String controllerKey = httpMethod.toLowerCase()+":"+uri.replaceFirst(contextPath, "");
         ControllerObject controllerObject = beansMap.getController(controllerKey);
         // 如果没有匹配，返回404
         if(controllerObject == null){

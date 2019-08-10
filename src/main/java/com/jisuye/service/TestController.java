@@ -10,12 +10,28 @@ import java.util.List;
 public class TestController {
 
     @Resource
+    private Abc abc;
+
+    @Resource
     private JdbcTemplate jdbcTemplate;
 
     @GetMapping("/hello")
     public List<AbcEntity> test(@RequestParam("name") String name, @RequestParam("a") String age){
         List<AbcEntity> list = jdbcTemplate.select("select * from abc where name=?", AbcEntity.class, name);
+        abc.test("ixx");
         return list;
+    }
+
+    @GetMapping("/abc")
+    public String abc(){
+        abc.abc("ixx");
+        return "success";
+    }
+
+    @GetMapping("/abc2")
+    public String abc2(){
+        abc.abc2("ixx");
+        return "success";
     }
 
     @DeleteMapping

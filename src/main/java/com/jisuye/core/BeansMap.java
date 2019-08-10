@@ -16,6 +16,17 @@ public class BeansMap {
     // controller容器
     private static HashMap<String, ControllerObject> controllers = new HashMap<>();
 
+    // aop容器
+    private static HashMap<String, AspectObject> aops = new HashMap<>();
+
+    public void putAop(String key, AspectObject aspectObject){
+        aops.put(key, aspectObject);
+    }
+
+    public static AspectObject getAop(String key){
+        return aops.get(key);
+    }
+
     public void putController(String key, ControllerObject controllerObject){
         controllers.put(key, controllerObject);
     }

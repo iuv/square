@@ -18,9 +18,13 @@ public class BeanObject {
      */
     private String simpleName;
     /**
-     * 实际对象
+     * 代理（实际）对象
      */
     private Object object;
+    /**
+     * 实际对象
+     */
+    private Object srcObj;
     /**
      * 包路径(com.jisuye)
      */
@@ -57,8 +61,13 @@ public class BeanObject {
         return object;
     }
 
-    public void setObject(Object object) {
-        this.object = object;
+    public Object getSrcObj() {
+        return srcObj;
+    }
+
+    public void setObject(Object obj, Object proxy) {
+        this.srcObj = obj;
+        this.object = proxy;
     }
 
     public String getPackages() {
