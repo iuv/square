@@ -85,7 +85,7 @@ public class DbUtil {
                 Method[] methods = clazz.getMethods();
                 for (Method method : methods) {
                     if(method.getName().startsWith("set")){
-                        String field = BeansInitUtil.firstToLowerCase(method.getName().substring(3));
+                        String field = StringUtil.firstToLowerCase(method.getName().substring(3));
                         method.invoke(t, rs.getObject(field));
                     }
                 }

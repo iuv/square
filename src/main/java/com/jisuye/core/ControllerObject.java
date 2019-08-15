@@ -19,6 +19,13 @@ import java.lang.reflect.Method;
 public class ControllerObject {
     private static final Logger log = LoggerFactory.getLogger(ControllerObject.class);
 
+    public ControllerObject(SquareParam[] params, String httpMethod,Method method, String beanKey){
+        this.params = params;
+        this.httpMethod = httpMethod;
+        this.method = method;
+        // 这里不从容器中获取Bean 只保存获取bean的key （为了做aop兼容）获取动作放到controller调用阶段
+        this.beanKey = beanKey;
+    }
     /**
      * bean 实例
      */
@@ -40,6 +47,11 @@ public class ControllerObject {
     private SquareParam[] params;
 
     /**
+     * bean 实例在容器中保存的key(为了兼容Aop，延时获取对象使用)
+     */
+    private String beanKey;
+
+    /**
      * 反射执行controller方法
      * @param req
      * @return
@@ -58,6 +70,10 @@ public class ControllerObject {
             }
         }
         try {
+            // 延时从容器中获取对象
+            if(object == null){
+                this.setObject(BeansMap.get(beanKey).getObject());
+            }
             Object o = this.getMethod().invoke(this.getObject(), os);
             return o;
         } catch (Exception e) {
@@ -135,5 +151,13 @@ public class ControllerObject {
 
     public void setParams(SquareParam[] params) {
         this.params = params;
+    }
+
+    public String getBeanKey() {
+        return beanKey;
+    }
+
+    public void setBeanKey(String beanKey) {
+        this.beanKey = beanKey;
     }
 }

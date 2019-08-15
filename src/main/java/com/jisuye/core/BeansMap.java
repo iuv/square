@@ -19,7 +19,7 @@ public class BeansMap {
     // aop容器
     private static HashMap<String, AspectObject> aops = new HashMap<>();
 
-    public void putAop(String key, AspectObject aspectObject){
+    public static void putAop(String key, AspectObject aspectObject){
         aops.put(key, aspectObject);
     }
 
@@ -27,27 +27,27 @@ public class BeansMap {
         return aops.get(key);
     }
 
-    public void putController(String key, ControllerObject controllerObject){
+    public static void putController(String key, ControllerObject controllerObject){
         controllers.put(key, controllerObject);
     }
 
-    public ControllerObject getController(String key){
+    public static ControllerObject getController(String key){
         return controllers.get(key);
     }
 
-    public void put(String key, BeanObject beanObject){
+    public static void put(String key, BeanObject beanObject){
         beans.put(key, beanObject);
     }
 
-    public BeanObject get(String key){
+    public static BeanObject get(String key){
         return beans.get(key);
     }
 
-    public Set<Map.Entry<String, BeanObject>> entrySet(){
+    public static Set<Map.Entry<String, BeanObject>> entrySet(){
         return beans.entrySet();
     }
 
-    public int size(){
+    public static int size(){
         return beans.size();
     }
 }

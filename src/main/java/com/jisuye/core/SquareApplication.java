@@ -1,7 +1,6 @@
 package com.jisuye.core;
 
 import com.jisuye.exception.SquareException;
-import com.jisuye.service.Abc;
 import com.jisuye.util.*;
 import org.apache.catalina.Context;
 import org.apache.catalina.Wrapper;
@@ -21,7 +20,6 @@ import java.util.Map;
 public class SquareApplication {
     private static final Logger log = LoggerFactory.getLogger(SquareApplication.class);
     private static Map<String, Object> CONF_MAP = new HashMap<>();
-    private static BeansMap BEAN_MAP = new BeansMap();
     private static Tomcat tomcat = null;
     private static String CONTEXT_PATH = "/";
     private static String ENCODING = "UTF-8";
@@ -31,7 +29,7 @@ public class SquareApplication {
     public static void run(Class clzz, String[] args) {
         try {
             long startTime = System.currentTimeMillis();
-            ApplicationContext.init(CONF_MAP, BEAN_MAP);
+            ApplicationContext.init(CONF_MAP);
             classesPathUtil = new ClassesPathUtil(clzz);
             // 加载配置
             loadYaml(classesPathUtil.getProjectPath());
@@ -39,16 +37,18 @@ public class SquareApplication {
             setArgs(args);
             // 输出banner
             printBanner(classesPathUtil.getProjectPath());
-            BeansInitUtil.init(clzz, BEAN_MAP);
-            log.info("beans size is:{}", BEAN_MAP.size());
+            BeansInitUtil.init(clzz);
+            log.info("beans size is:{}", BeansMap.size());
             //查看bean是否注入成功
-            Abc abc = (Abc)(ApplicationContext.getBean("abcImpl").getObject());
-            abc.test("ixx");
             tomcat = new Tomcat();
             // 设置Tomcat工作目录
-            tomcat.setBaseDir(classesPathUtil.getProjectPath() + "/Tomcat");
+            File f = new File("/square"+ System.currentTimeMillis()+ "/Tomcat/webapps");
+            if(!f.exists()){
+                f.mkdirs();
+            }
+            tomcat.setBaseDir(f.getPath().replace("webapps", ""));
             tomcat.setPort(TOMCAT_PORT);
-            Context context = tomcat.addWebapp(CONTEXT_PATH, classesPathUtil.getPublicPath());
+            Context context = tomcat.addWebapp(CONTEXT_PATH, "/");
             // 添加DsipatcherServlet
             Wrapper wrapper = Tomcat.addServlet(context, "DispatcherServlet", new DispatcherServlet());
             wrapper.addMapping("/");

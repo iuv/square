@@ -6,6 +6,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,9 +19,17 @@ public class LoadApplicationYmlUtil {
     private static final Logger log = LoggerFactory.getLogger(LoadApplicationYmlUtil.class);
     public static Map<String, Object> load(String projectPath){
         Map<String, Object> retMap = new HashMap<>();
-        Yaml yaml = new Yaml();
         try {
-            Map<String, Object> map = (Map<String, Object>)yaml.load(new FileInputStream(projectPath+"/application.yml"));
+            InputStream is;
+            if(projectPath != null &&  projectPath.indexOf("!") > 0){
+                is = ClassLoader.getSystemResourceAsStream("application.yml");
+            } else {
+                projectPath += "/application.yml";
+                log.info("load yml file path:{}", projectPath);
+                is = new FileInputStream(projectPath);
+            }
+            Yaml yaml = new Yaml();
+            Map<String, Object> map = (Map<String, Object>)yaml.load(is);
             if(map != null && map.size()>0){
                 for(Map.Entry e : map.entrySet()) {
                     convert("", retMap, e);
@@ -29,7 +38,6 @@ public class LoadApplicationYmlUtil {
         } catch (FileNotFoundException e) {
             log.error("load application.yml file error.", e);
         }
-
         return retMap;
     }
 

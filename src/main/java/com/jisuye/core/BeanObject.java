@@ -9,6 +9,12 @@ import java.lang.reflect.Field;
  * @date 2019-06-20
  */
 public class BeanObject {
+
+    public BeanObject(Class clzz, Object srcObj){
+        this.setClass(clzz);
+        this.srcObj = srcObj;
+    }
+
     /**
      * 类全名（带包路径）
      */
@@ -49,6 +55,11 @@ public class BeanObject {
      */
     private Field[] fields;
 
+    /**
+     * Bean对象的类
+     */
+    private Class beanClass;
+
     public String getClassName() {
         return className;
     }
@@ -65,9 +76,12 @@ public class BeanObject {
         return srcObj;
     }
 
-    public void setObject(Object obj, Object proxy) {
-        this.srcObj = obj;
-        this.object = proxy;
+    public void setSrcObj(Object srcObj) {
+        this.srcObj = srcObj;
+    }
+
+    public void setObject(Object obj) {
+        this.object = obj;
     }
 
     public String getPackages() {
@@ -118,11 +132,20 @@ public class BeanObject {
         this.fields = fields;
     }
 
+    public Class getBeanClass() {
+        return beanClass;
+    }
+
+    public void setBeanClass(Class beanClass) {
+        this.beanClass = beanClass;
+    }
+
     public void setClass(Class clzz){
         this.setSimpleName(clzz.getSimpleName());
         this.setClassName(clzz.getName());
         this.setInterfacs(clzz.getInterfaces());
         this.setPackages(clzz.getPackage().toString());
         this.setFields(clzz.getDeclaredFields());
+        this.setBeanClass(clzz);
     }
 }

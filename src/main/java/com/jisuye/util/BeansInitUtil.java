@@ -7,20 +7,20 @@ import com.jisuye.annotations.aop.Pointcut;
 import com.jisuye.annotations.web.*;
 import com.jisuye.core.*;
 import com.jisuye.exception.SquareException;
-import com.jisuye.service.Abc;
-import com.jisuye.service.aop.WebLogAspect;
-import com.jisuye.service.impl.AbcImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Proxy;
 import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
  * Bean初始化类
@@ -30,36 +30,38 @@ import java.util.*;
 public class BeansInitUtil {
     private static final Logger log = LoggerFactory.getLogger(BeansInitUtil.class);
 
-    public static BeansMap init(Class clazz, BeansMap beansMap){
+    public static void init(Class clazz){
         String path = clazz.getResource("").getPath();
         log.info("===bean init path:{}", path);
-        File root = new File(path);
-        // 先加载aop类
-        initAop(root, beansMap);
-        // 处理控制反转
-        initFile(root, beansMap);
+        if(path.indexOf("!")<0) {
+            File root = new File(path);
+            // 处理控制反转(加载aop切面,controller)
+            initFile(root);
+        } else {
+            // 处理jar包内的反射逻辑
+            initJar(path);
+        }
+        // 处理aop类
+        initAop();
         // 处理依赖注入
-        initDI(beansMap);
-        return beansMap;
+        initDI();
     }
 
-    private static void initAop(File file, BeansMap map){
-        File[] fs = file.listFiles();
-        for (File f : fs) {
-            if(f.isDirectory()){
-                // 递归目录
-                initAop(f, map);
-            } else {
-                // 处理class
-                loadAop(f, map);
+    private static void initAop(){
+        List<BeanObject> list = new ArrayList<>();
+        // 循环所有Bean处理Aop
+        for(Map.Entry entry : BeansMap.entrySet()) {
+            BeanObject beanObject = (BeanObject) entry.getValue();
+            // 如果已经处理过，则跳过
+            if (beanObject.getObject() != null) {
+                break;
             }
+            beanObject.setObject(getInstance(beanObject.getBeanClass(), beanObject.getSrcObj()));
         }
     }
 
-    private static void loadAop(File file, BeansMap map){
-        log.info("load bean path:{}", file.getPath());
+    private static void loadAop(Class clzz){
         try {
-            Class clzz = Class.forName(getClassPath(file));
             Annotation[] annotations = clzz.getAnnotations();
             if (annotations.length > 0 && filterAspectAnnotation(annotations)) {
                 Object obj = clzz.newInstance();
@@ -75,8 +77,8 @@ public class BeansInitUtil {
                                 aspectObject.setAspectBean(obj);
                             }
                             String packageStr = setPointPackageAndMethod(((Pointcut)methodAnnotations[0]).value(), aspectObject, method);
-                            map.putAop(packageStr, aspectObject);
-                            map.putAop(method.getName(), aspectObject);
+                            BeansMap.putAop(packageStr, aspectObject);
+                            BeansMap.putAop(method.getName(), aspectObject);
                         } else if(methodAnnotations[0] instanceof Before){
                             // Before 处理
                             String val = ((Before)methodAnnotations[0]).value();
@@ -88,7 +90,7 @@ public class BeansInitUtil {
                             }
                             aspectObject1.setType("before");
                             aspectObject1.setMethodMap(val, method);
-                            map.putAop(val, aspectObject1);
+                            BeansMap.putAop(val, aspectObject1);
                         }
                     }
                 }
@@ -124,55 +126,74 @@ public class BeansInitUtil {
             return packageStr;
         }
     }
-
-    private static void initFile(File file, BeansMap map){
+    private static void initJar(String jarPath){
+        try {
+            String packageStr = jarPath.substring(jarPath.indexOf("!")+2).replaceAll("/", ".");
+            log.info("packageStr :{}", packageStr);
+            jarPath = jarPath.substring(0, jarPath.indexOf("!")).replace("file:/", "");
+            log.info("jar file path:{}", jarPath);
+            JarFile jarFile = new JarFile(new File(jarPath));
+            // 获取jar文件条目
+            Enumeration<JarEntry> enumFiles = jarFile.entries();
+            JarEntry entry;
+            while(enumFiles.hasMoreElements()){
+                entry = enumFiles.nextElement();
+                String className = entry.getName().replaceAll("/", ".");
+                // 只处理自己包下的class文件
+                if(className.startsWith(packageStr) && className.indexOf(".class")>=0){
+                    className = className.substring(0,className.length()-6).replace("/", ".");
+                    log.info("class:{}", className);
+                    loadClass(className);
+                }
+            }
+        } catch (IOException e) {
+            log.error("load jar file error!", e);
+        }
+    }
+    private static void initFile(File file){
         File[] fs = file.listFiles();
         for (File f : fs) {
             if(f.isDirectory()){
                 // 递归目录
-                initFile(f, map);
+                initFile(f);
             } else {
                 // 处理class
-                loadClass(f, map);
+                loadClass(getClassPath(f.getPath()));
             }
         }
     }
-    private static String getClassPath(File file){
-        String path = file.getPath();
+    private static String getClassPath(String filePath){
+        String path = filePath;
         path = path.substring(path.indexOf("classes")+8).replace(".class", "");
         path = path.replace("\\", ".");
         return path;
     }
-    private static void loadClass(File file, BeansMap map){
-        if(file == null){
+    private static void loadClass(String className){
+        if(className == null){
             return;
         }
         try {
-            BeanObject beanObject = new BeanObject();
-            log.info("load bean path:{}", file.getPath());
-            Class clzz = Class.forName(getClassPath(file));
+            log.info("load bean class:{}", className);
+            Class clzz = Class.forName(className);
             Annotation[] annotations = clzz.getAnnotations();
             if(annotations.length >0 && filterClassAnnotation(annotations)){
+                BeanObject beanObject = new BeanObject(clzz, clzz.newInstance());
                 beanObject.setAnnotaions(annotations);
-                Object obj = clzz.newInstance();
-                Object proxyObj = getInstance(clzz, obj);
-                beanObject.setClass(clzz);
-                beanObject.setObject(obj, proxyObj);
                 // 按接口设置bean
                 for (Class aClass : beanObject.getInterfacs()) {
-                    BeanObject tmp = map.get(aClass.getName());
+                    BeanObject tmp = BeansMap.get(aClass.getName());
                     if(tmp != null){
                         beanObject.setNext(tmp);
                     }
-                    map.put(aClass.getName(), beanObject);
+                    BeansMap.put(aClass.getName(), beanObject);
                 }
                 // 按类设置bean
-                map.put(beanObject.getClassName(), beanObject);
-                String simpleName = firstToLowerCase(beanObject.getSimpleName());
-                if(map.get(simpleName) != null){
+                BeansMap.put(beanObject.getClassName(), beanObject);
+                String simpleName = StringUtil.firstToLowerCase(beanObject.getSimpleName());
+                if(BeansMap.get(simpleName) != null){
                     throw new SquareException("There are duplicate beans ，beanName:"+simpleName);
                 }
-                map.put(simpleName, beanObject);
+                BeansMap.put(simpleName, beanObject);
                 // 按注解输入value设置bean
                 for (Annotation annotation : annotations) {
                     String tmp_name = "";
@@ -181,13 +202,15 @@ public class BeansInitUtil {
                     } else if(annotation instanceof Component) {
                         tmp_name = ((Component)annotation).value();
                     } else if(annotation instanceof Controller) {
-                        initController(clzz, ((Controller)annotation).value(), map);
+                        initController(clzz, ((Controller)annotation).value());
+                    } else if(annotation instanceof Aspect){
+                        loadAop(clzz);
                     }
                     if(tmp_name != null && !tmp_name.equals("")) {
-                        if(map.get(tmp_name) != null){
+                        if(BeansMap.get(tmp_name) != null){
                             throw new SquareException("There are duplicate beans ，beanName:"+tmp_name);
                         }
-                        map.put(tmp_name, beanObject);
+                        BeansMap.put(tmp_name, beanObject);
                     }
                 }
             }
@@ -204,7 +227,7 @@ public class BeansInitUtil {
      * @param clzz
      * @return
      */
-    private static Object getInstance(Class clzz, Object obj) throws IllegalAccessException, InstantiationException {
+    private static Object getInstance(Class clzz, Object obj){
         String packageStr = clzz.getPackage().getName();
         // 如果不符合切面规则，则直接反射生成 不使用代理
         if(BeansMap.getAop(packageStr) == null){
@@ -225,13 +248,14 @@ public class BeansInitUtil {
      * @param clzz
      * @param classPath
      */
-    private static void initController(Class clzz, String classPath, BeansMap beansMap){
+    private static void initController(Class clzz, String classPath){
         try {
+            classPath = classPath.equals("/") ? "" : classPath;
             Method[] methods = clzz.getMethods();
+            log.info("classPath:{}, methods.length:{}", classPath, methods.length);
             // 处理每一个方法
             for (Method method : methods) {
-                Annotation[] annotations = method.getDeclaredAnnotations();
-                String[] methodPath = getMethodAnnotationValue(annotations);
+                String[] methodPath = getMethodAnnotationValue(method.getDeclaredAnnotations());
                 // 说明是@GetMapping @PostMapping @PutMapping @DeleteMapping 中的一个
                 if (methodPath != null) {
                     // 获取参数及注解
@@ -239,17 +263,12 @@ public class BeansInitUtil {
                     SquareParam[] params = new SquareParam[parameters.length];
                     int i = 0;
                     for (Parameter parameter : parameters) {
-                        Annotation[] paramAnnotations = parameter.getAnnotations();
-                        SquareParam param = getParam(paramAnnotations, parameter.getType());
-                        params[i++] = param;
+                        params[i++] = getParam(parameter.getAnnotations(), parameter.getType());
                     }
-                    ControllerObject co = new ControllerObject();
-                    co.setParams(params);
-                    co.setHttpMethod(methodPath[0]);
-                    co.setMethod(method);
-                    co.setObject(beansMap.get(firstToLowerCase(clzz.getSimpleName())).getObject());
+                    ControllerObject co = new ControllerObject(params, methodPath[0], method, StringUtil.firstToLowerCase(clzz.getSimpleName()));
                     String key = methodPath[0] +":"+ classPath+methodPath[1];
-                    beansMap.putController(key, co);
+                    log.info("add controller key:{}", key);
+                    BeansMap.putController(key, co);
                 }
             }
         } catch (Exception e){
@@ -259,13 +278,12 @@ public class BeansInitUtil {
     }
     /**
      * 处理关系依赖
-     * @param map Bean容器
      */
-    private static void initDI(BeansMap map){
+    private static void initDI(){
         List<BeanObject> list = new ArrayList<>();
         BeanObject sqlBean = null;
         // 循环所有Bean处理依赖
-        for(Map.Entry entry : map.entrySet()){
+        for(Map.Entry entry : BeansMap.entrySet()){
             BeanObject beanObject = (BeanObject)entry.getValue();
             // 如果已经处理过，则跳过
             if(list.contains(beanObject)){
@@ -277,25 +295,24 @@ public class BeansInitUtil {
             for (Field field : beanObject.getFields()) {
                 if(filterFieldAnnotation(field.getAnnotations())){
                     String name = getResourceName(field.getAnnotations());
-                    BeanObject bean = null;
+                    BeanObject bean;
                     // 有指定bean名字按指定去取
                     if(name != null && !name.equals("")){
-                        bean = map.get(firstToLowerCase(name));
+                        bean = BeansMap.get(StringUtil.firstToLowerCase(name));
                     } else {
                         // 没有指定按接口（如果有的话）或类型去取
                         Class fieldClass = field.getType();
-                        bean = map.get(fieldClass.getName());
+                        bean = BeansMap.get(fieldClass.getName());
                         // 如果有next说明是有多个实现的接口，则要判断名字
                         if(bean != null && bean.getNext() != null){
                             String fieldName = field.getName();
                             while(bean != null){
-                                if(firstToLowerCase(bean.getSimpleName()).equals(fieldName)){
+                                if(StringUtil.firstToLowerCase(bean.getSimpleName()).equals(fieldName)){
                                     break;
                                 }
                                 bean = bean.getNext();
                             }
                             if(bean == null){
-                                // 多于两个匹配的bean异常
                                 log.error("无法确定的Bean依赖，field:{}, 存在多个依赖！", beanObject.getClassName()+"."+fieldName);
                                 throw new SquareException("无法确定的Bean依赖，存在多个依赖！");
                             }
@@ -303,10 +320,9 @@ public class BeansInitUtil {
                             // 如果是JdbcTemplate依赖，则初始化DbUtil并初始化及注入JdbcTemplate
                             if(sqlBean == null) {
                                 DbUtil.init();
-                                sqlBean = new BeanObject();
-                                sqlBean.setClass(JdbcTemplate.class);
                                 JdbcTemplate jdbcTemplate = new JdbcTemplate();
-                                sqlBean.setObject(jdbcTemplate, jdbcTemplate);
+                                sqlBean = new BeanObject(JdbcTemplate.class, jdbcTemplate);
+                                sqlBean.setObject(jdbcTemplate);
                             }
                             bean = sqlBean;
                         }
@@ -327,7 +343,7 @@ public class BeansInitUtil {
                 }
             }
         }
-        map.put(JdbcTemplate.class.getName(), sqlBean);
+        BeansMap.put(JdbcTemplate.class.getName(), sqlBean);
     }
     /** * 判断类上加的注解是不是要初始化为bean */
     private static boolean filterClassAnnotation(Annotation[] annotations){
@@ -375,7 +391,10 @@ public class BeansInitUtil {
                 methodPath = new String[]{"post", ((PostMapping) annotation).value()};
             } else if(annotation instanceof PutMapping){
                 methodPath = new String[]{"put", ((PutMapping) annotation).value()};
+            } else {
+                continue;
             }
+            break;
         }
         return methodPath;
     }
@@ -398,31 +417,5 @@ public class BeansInitUtil {
             name = ((Resource)annotation).name();
         }
         return name;
-    }
-
-    /** 首字段转大写*/
-    public static String firstToUpperCase(String str){
-        if(str == null || str.equals("")){
-            return str;
-        }
-        char f = str.charAt(0);
-        str = str.substring(1);
-        if(f>'Z'){
-            f = (char)(f-32);
-        }
-        return f+str;
-    }
-
-    /** 首字段转大写*/
-    public static String firstToLowerCase(String str){
-        if(str == null || str.equals("")){
-            return str;
-        }
-        char f = str.charAt(0);
-        str = str.substring(1);
-        if(f<'a'){
-            f = (char)(f+32);
-        }
-        return f+str;
     }
 }

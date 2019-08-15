@@ -9,19 +9,17 @@ import java.util.Map;
  */
 public class ApplicationContext {
     private static Map<String, Object> CONF_MAP;
-    private static BeansMap BEAN_MAP;
 
-    public static void init(Map<String, Object> conf, BeansMap bean){
+    public static void init(Map<String, Object> conf){
         CONF_MAP = conf;
-        BEAN_MAP = bean;
     }
 
     public static BeanObject getBean(String name){
-        return BEAN_MAP.get(name);
+        return BeansMap.get(name);
     }
 
-    public static BeanObject betBean(Class clazz){
-        return BEAN_MAP.get(clazz.getName());
+    public static BeanObject getBean(Class clazz){
+        return BeansMap.get(clazz.getName());
     }
 
     public static Object getConf(String key){

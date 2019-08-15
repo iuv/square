@@ -18,8 +18,6 @@ import java.io.IOException;
 public class DispatcherServlet extends HttpServlet {
     private static final Logger log = LoggerFactory.getLogger(DispatcherServlet.class);
 
-    private BeansMap beansMap = new BeansMap();
-
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         // 保存web上下文
@@ -30,7 +28,8 @@ public class DispatcherServlet extends HttpServlet {
         String uri = req.getRequestURI();
         // 匹配到对应的controller
         String controllerKey = httpMethod.toLowerCase()+":"+uri.replaceFirst(contextPath, "");
-        ControllerObject controllerObject = beansMap.getController(controllerKey);
+        log.info("http request path:" + controllerKey);
+        ControllerObject controllerObject = BeansMap.getController(controllerKey);
         // 如果没有匹配，返回404
         if(controllerObject == null){
             resp.sendError(404);
@@ -46,7 +45,6 @@ public class DispatcherServlet extends HttpServlet {
                     json = JSON.toJSONString(obj);
                     resp.setHeader("content-type", "application/json;charset=UTF-8");
                 }
-                log.info("http request path:" + controllerKey);
                 log.info("exec method ：" + controllerObject.getMethod().getName());
                 log.info("response:" + json);
                 resp.getWriter().print(json);

@@ -23,8 +23,13 @@ public class ClassesPathUtil {
 
     public ClassesPathUtil(Class clzz){
         String basePath = clzz.getResource("").getPath();
+        log.info("basePath+++++{}", basePath);
         //  ..../classes
-        projectPath = basePath.substring(0, basePath.indexOf("classes")+7);
+        if(basePath.indexOf("classes")>0) {
+            projectPath = basePath.substring(0, basePath.indexOf("classes") + 7);
+        } else {
+            projectPath = basePath.substring(0, basePath.indexOf("!")+1);
+        }
         publicPath = setPublic(projectPath, "/public");
     }
 
