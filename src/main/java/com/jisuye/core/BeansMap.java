@@ -1,8 +1,6 @@
 package com.jisuye.core;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * beans容器
@@ -12,6 +10,9 @@ import java.util.Set;
 public class BeansMap {
     // bean容器
     private static HashMap<String, BeanObject> beans = new HashMap<>();
+
+    // 保存遍历的所有class
+    private static List<Class> classList = new ArrayList<>();
 
     // controller容器
     private static HashMap<String, ControllerObject> controllers = new HashMap<>();
@@ -39,6 +40,10 @@ public class BeansMap {
         beans.put(key, beanObject);
     }
 
+    public static Set<String> keySet(){
+        return beans.keySet();
+    }
+
     public static BeanObject get(String key){
         return beans.get(key);
     }
@@ -49,5 +54,12 @@ public class BeansMap {
 
     public static int size(){
         return beans.size();
+    }
+
+    public static void addClass(Class clzz){
+        classList.add(clzz);
+    }
+    public static List<Class> getClassList(){
+        return classList;
     }
 }

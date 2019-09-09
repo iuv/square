@@ -42,7 +42,7 @@ public class SquareApplication {
             //查看bean是否注入成功
             tomcat = new Tomcat();
             // 设置Tomcat工作目录
-            File f = new File("/square"+ System.currentTimeMillis()+ "/Tomcat/webapps");
+            File f = new File("/tmp/square"+ System.currentTimeMillis()+ "/Tomcat/webapps");
             if(!f.exists()){
                 f.mkdirs();
             }

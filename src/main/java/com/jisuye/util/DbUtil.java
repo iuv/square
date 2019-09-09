@@ -6,6 +6,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.sql.DataSource;
 import java.lang.reflect.Method;
 import java.sql.*;
 import java.util.ArrayList;
@@ -19,10 +20,14 @@ import java.util.List;
 public class DbUtil {
     private static final Logger log = LoggerFactory.getLogger(DbUtil.class);
     private static Connection connection;
+    private static DataSource dataSource;
 
     /** 初始化方法*/
     public static void init(){
         try {
+            if(connection != null && dataSource != null){
+                return;
+            }
             String url = ApplicationContext.getConf("square.datasource.url").toString();
             String username = ApplicationContext.getConf("square.datasource.username").toString();
             String password = ApplicationContext.getConf("square.datasource.password").toString();
@@ -36,6 +41,7 @@ public class DbUtil {
             ds.addDataSourceProperty("prepStmtCacheSize", "250");
             ds.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
             connection = ds.getConnection();
+            dataSource = ds;
         } catch (Exception e) {
             log.error("mysql connection init error..", e);
             throw new SquareException("mysql connection init error....");
@@ -95,5 +101,11 @@ public class DbUtil {
             log.error("select exception.", e);
         }
         return list.size()>0 ? list : null;
+    }
+    public static DataSource getDataSource(){
+        if (dataSource == null) {
+            init();
+        }
+        return dataSource;
     }
 }

@@ -14,10 +14,7 @@ import javax.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.lang.reflect.Proxy;
+import java.lang.reflect.*;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -43,18 +40,45 @@ public class BeansInitUtil {
         }
         // 处理aop类
         initAop();
+        // 处理config
+        initConfig();
         // 处理依赖注入
         initDI();
     }
 
+    private static void initConfig(){
+        // 循环所有Bean处理Config
+        Set<String> keySet = BeansMap.keySet();
+        String[] keys = new String[keySet.size()];
+        keySet.toArray(keys);
+        List<Object> list = new ArrayList<>();
+        for (String key : keys) {
+            BeanObject beanObject = BeansMap.get(key);
+            if(list.contains(beanObject)){
+                continue;
+            }
+            list.add(beanObject);
+            for (Annotation annotaion : beanObject.getAnnotaions()) {
+                // 如果是配置则调用config()方法
+                if(annotaion instanceof Config){
+                    try {
+                        Method method = beanObject.getBeanClass().getMethod("config");
+                        method.invoke(beanObject.getObject());
+                    } catch (Exception e) {
+                        log.error("execute config method error!!", e);
+                    }
+                }
+            }
+        }
+    }
+
     private static void initAop(){
-        List<BeanObject> list = new ArrayList<>();
         // 循环所有Bean处理Aop
         for(Map.Entry entry : BeansMap.entrySet()) {
             BeanObject beanObject = (BeanObject) entry.getValue();
             // 如果已经处理过，则跳过
             if (beanObject.getObject() != null) {
-                break;
+                continue;
             }
             beanObject.setObject(getInstance(beanObject.getBeanClass(), beanObject.getSrcObj()));
         }
@@ -128,9 +152,10 @@ public class BeansInitUtil {
     }
     private static void initJar(String jarPath){
         try {
+            log.info("jarPath :{}", jarPath);
             String packageStr = jarPath.substring(jarPath.indexOf("!")+2).replaceAll("/", ".");
             log.info("packageStr :{}", packageStr);
-            jarPath = jarPath.substring(0, jarPath.indexOf("!")).replace("file:/", "");
+            jarPath = jarPath.substring(0, jarPath.indexOf("!")).replace("file:", "");
             log.info("jar file path:{}", jarPath);
             JarFile jarFile = new JarFile(new File(jarPath));
             // 获取jar文件条目
@@ -158,14 +183,16 @@ public class BeansInitUtil {
                 initFile(f);
             } else {
                 // 处理class
-                loadClass(getClassPath(f.getPath()));
+                if(f.getPath().endsWith("class")) {
+                    loadClass(getClassPath(f.getPath()));
+                }
             }
         }
     }
     private static String getClassPath(String filePath){
         String path = filePath;
         path = path.substring(path.indexOf("classes")+8).replace(".class", "");
-        path = path.replace("\\", ".");
+        path = path.replace(File.separatorChar+"", ".");
         return path;
     }
     private static void loadClass(String className){
@@ -176,6 +203,8 @@ public class BeansInitUtil {
             log.info("load bean class:{}", className);
             Class clzz = Class.forName(className);
             Annotation[] annotations = clzz.getAnnotations();
+            // 保存所有类
+            BeansMap.addClass(clzz);
             if(annotations.length >0 && filterClassAnnotation(annotations)){
                 BeanObject beanObject = new BeanObject(clzz, clzz.newInstance());
                 beanObject.setAnnotaions(annotations);
@@ -287,7 +316,7 @@ public class BeansInitUtil {
             BeanObject beanObject = (BeanObject)entry.getValue();
             // 如果已经处理过，则跳过
             if(list.contains(beanObject)){
-                break;
+                continue;
             }
             // 添加到已处理列表
             list.add(beanObject);
@@ -351,6 +380,7 @@ public class BeansInitUtil {
         for (Annotation annotation : annotations) {
             b = annotation instanceof Service || annotation instanceof Component;
             b = b || annotation instanceof Controller;
+            b = b || annotation instanceof Config;
             if(b){
                 break;
             }
