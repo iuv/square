@@ -92,7 +92,25 @@ public class DbUtil {
                 for (Method method : methods) {
                     if(method.getName().startsWith("set")){
                         String field = StringUtil.firstToLowerCase(method.getName().substring(3));
-                        method.invoke(t, rs.getObject(field));
+                        String paramClass = method.getParameterTypes()[0].getSimpleName();
+                        switch (paramClass){
+                            case "Integer":
+                                method.invoke(t, rs.getInt(field)); break;
+                            case "Float":
+                                method.invoke(t, rs.getFloat(field)); break;
+                            case "Double":
+                                method.invoke(t, rs.getDouble(field)); break;
+                            case "Short":
+                                method.invoke(t, rs.getShort(field)); break;
+                            case "Byte":
+                                method.invoke(t, rs.getByte(field)); break;
+                            case "Long":
+                                method.invoke(t, rs.getLong(field)); break;
+                            case "Boolean":
+                                method.invoke(t, rs.getBoolean(field)); break;
+                            default:
+                                method.invoke(t, rs.getObject(field));
+                        }
                     }
                 }
                 list.add(t);

@@ -1,5 +1,6 @@
 package com.jisuye.util;
 
+import com.jisuye.core.SquareApplication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,11 +27,13 @@ public class ClassesPathUtil {
         log.info("basePath+++++{}", basePath);
         //  ..../classes
         if(basePath.indexOf("classes")>0) {
-            projectPath = basePath.substring(0, basePath.indexOf("classes") + 7);
+            projectPath = basePath.substring(0, basePath.indexOf("classes")+7);
+            publicPath = basePath.substring(0, basePath.indexOf("target"));
+            publicPath = publicPath+"target/classes/public";
         } else {
             projectPath = basePath.substring(0, basePath.indexOf("!")+1);
+            publicPath = SquareApplication.TEMP_TOMCAT_DIR;
         }
-        publicPath = setPublic(projectPath, "/public");
     }
 
     private String setPublic(String basePath, String path){

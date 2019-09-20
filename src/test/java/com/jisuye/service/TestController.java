@@ -18,7 +18,7 @@ public class TestController {
     @GetMapping("/hello")
     public List<AbcEntity> test(@RequestParam("name") String name, @RequestParam("a") String age){
         List<AbcEntity> list = jdbcTemplate.select("select * from abc where name=?", AbcEntity.class, name);
-        abc.test("ixx");
+//        abc.test("ixx");
         return list;
     }
 

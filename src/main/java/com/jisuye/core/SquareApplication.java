@@ -3,12 +3,16 @@ package com.jisuye.core;
 import com.jisuye.exception.SquareException;
 import com.jisuye.util.*;
 import org.apache.catalina.Context;
+import org.apache.catalina.WebResourceRoot;
 import org.apache.catalina.Wrapper;
+import org.apache.catalina.servlets.DefaultServlet;
 import org.apache.catalina.startup.Tomcat;
+import org.apache.catalina.webresources.StandardRoot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,8 +27,10 @@ public class SquareApplication {
     private static Tomcat tomcat = null;
     private static String CONTEXT_PATH = "/";
     private static String ENCODING = "UTF-8";
+    private static String SUFFIXS = "htm,html,css,js,jpg,jpeg,png,gif,json,mp4,mp3,avi,rm";
     private static int TOMCAT_PORT = 8080;
     private static ClassesPathUtil classesPathUtil;
+    public static String TEMP_TOMCAT_DIR = "/tmp/square/tomcat";
 
     public static void run(Class clzz, String[] args) {
         try {
@@ -41,17 +47,31 @@ public class SquareApplication {
             log.info("beans size is:{}", BeansMap.size());
             //查看bean是否注入成功
             tomcat = new Tomcat();
+            tomcat.setPort(TOMCAT_PORT);
             // 设置Tomcat工作目录
-            File f = new File("/tmp/square"+ System.currentTimeMillis()+ "/Tomcat/webapps");
+            File f = new File(TEMP_TOMCAT_DIR);
             if(!f.exists()){
                 f.mkdirs();
             }
-            tomcat.setBaseDir(f.getPath().replace("webapps", ""));
-            tomcat.setPort(TOMCAT_PORT);
-            Context context = tomcat.addWebapp(CONTEXT_PATH, "/");
+            f.deleteOnExit();
+            tomcat.setBaseDir(f.getPath());
+            Context context = tomcat.addWebapp(CONTEXT_PATH, classesPathUtil.getPublicPath());
+            // jar包中静态文件特殊处理
+            if(classesPathUtil.getProjectPath().indexOf("!")>0) {
+                String jar = "jar:"+classesPathUtil.getProjectPath()+"/";
+                URL url = new URL(jar);
+                context.setResources(new StandardRoot(context));
+                context.getResources().createWebResourceSet(WebResourceRoot.ResourceSetType.RESOURCE_JAR, "/", url, "/public");
+            }
             // 添加DsipatcherServlet
             Wrapper wrapper = Tomcat.addServlet(context, "DispatcherServlet", new DispatcherServlet());
             wrapper.addMapping("/");
+            // 设置静态资源走默认Servlet处理
+            Tomcat.addServlet(context, "DefaultServlet", new DefaultServlet());
+            String[] suffixs = SUFFIXS.split(",");
+            for (String suffix : suffixs) {
+                context.addServletMappingDecoded("*."+suffix, "DefaultServlet");
+            }
             // 执行这句才能支持JDNI查找
             tomcat.enableNaming();
             tomcat.getConnector().setURIEncoding(ENCODING);
