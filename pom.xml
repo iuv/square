@@ -15,7 +15,7 @@
         <snakeyaml.version>1.9</snakeyaml.version>
         <compiler.plugin.version>3.8.1</compiler.plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <mysql.version>5.1.35</mysql.version>
+        <mysql.version>8.0.28</mysql.version>
         <hikariCP.version>3.3.1</hikariCP.version>
         <fastjson.version>1.2.58</fastjson.version>
     </properties>
